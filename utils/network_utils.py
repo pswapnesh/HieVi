@@ -1,4 +1,5 @@
 import networkx as nx
+import numpy as np
 def make_network(hdb,df, wt_nan = 1e9):
     G = nx.DiGraph()
     for row in hdb._condensed_tree:
