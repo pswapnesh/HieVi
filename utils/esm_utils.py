@@ -4,7 +4,7 @@ import esm
 
 
 class EsmEmbedding:
-    def __init__(self, model="15b"):
+    def __init__(self, model="3b"):
         """
         Initialize the ESM embedding model based on the specified version.
 
@@ -25,7 +25,7 @@ class EsmEmbedding:
         self.batch_converter = self.alphabet.get_batch_converter()
         self.model.eval()  # Disable dropout for deterministic results
         print("########## Model loaded.")
-
+        torch.cuda.empty_cache()
         if torch.cuda.is_available():
             self.model = self.model.cuda()
             print("Transferred model to GPU")
@@ -36,14 +36,14 @@ class EsmEmbedding:
 
         Parameters:
         - data: A batch of sequences to process.
-        - mode (str): Aggregation mode for embeddings. Options are 'mean', 'cls', or others (default: 'mean').
+        - mode (str): Aggregation mode for embeddings. Options are 'mean' or 'cls' (default: 'mean').
 
         Returns:
-        - dict: A dictionary containing embeddings for specified layers.
+        - np.ndarray: A numpy array containing the embedding vector.
         """
-        torch.cuda.empty_cache()
+        
 
-        # Convert the input batch to tokens
+        # Convert the input sequence to tokens
         batch_labels, batch_strs, batch_tokens = self.batch_converter(data)
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
 
@@ -55,27 +55,18 @@ class EsmEmbedding:
                 batch_tokens, repr_layers=self.layers, return_contacts=False
             )
 
-        token_representations = {}
+        # Extract embeddings for the last layer (no dictionary return, just the vector)
+        layer = self.layers[-1]  # Using only the last layer
+        token_rep = results["representations"][layer]
 
-        for layer in self.layers:
-            token_rep = results["representations"][layer]
+        # Process based on the selected mode
+        if mode == "mean":
+            # Use mean of the sequence embeddings (ignoring padding)
+            layer_embedding = token_rep[0, 1 : batch_lens[0] - 1].mean(axis=0)  # Mean on GPU
+        elif mode == "cls":
+            # Use the [CLS] token embedding (first token)
+            layer_embedding = token_rep[0, 0]  # Directly use the CLS token
+        else:
+            raise ValueError("Invalid mode. Use 'mean' or 'cls'.")
 
-            # Process based on the mode
-            if mode == "mean":
-                layer_embedding = np.mean(
-                    token_rep[0, 1 : batch_lens[0] - 1].to(device="cpu").numpy(),
-                    axis=0,
-                )
-            elif mode == "cls":
-                layer_embedding = token_rep[0, 0].to(device="cpu").numpy()
-            else:
-                layer_embedding = np.mean(
-                    token_rep[0, 1 : batch_lens[0] - 1].to(device="cpu").numpy(),
-                    axis=0,
-                )
-                layer_cls = token_rep[0, 0].to(device="cpu").numpy()
-                token_representations[f"{layer}_cls"] = layer_cls
-
-            token_representations[str(layer)] = layer_embedding
-
-        return token_representations
+        return layer_embedding  # This will return a tensor if kept on GPU

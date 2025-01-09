@@ -28,6 +28,12 @@ class FastaReader:
                 accessions.add(accession)
         return len(accessions)
 
+    def generator(self):
+         with open(self.fasta_path, 'r') as fasta_file:
+            for record in SeqIO.parse(fasta_file, 'fasta'):
+                accession = record.id.split('_')[0]  # Extract accession
+                yield accession,record.id,str(record.seq).replace('*', self.unknown_token)
+
     def unique_accession_generator(self):
         """
         Generate sequences grouped by unique accession one at a time,
