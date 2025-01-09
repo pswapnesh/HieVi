@@ -23,7 +23,7 @@ class EsmCambrian:
         logits_output = self.client.logits(
         protein_tensor, LogitsConfig(sequence=True, return_embeddings=True)
         )
-        return logits_output.embeddings[:,1:-1,:].mean(axis = 1)
+        return logits_output.embeddings[0,1:-1,:].mean(axis = 0)
 
 
 def main(expt_name, output_folder, fasta_path, model_name, mode, chunk_size=16):
