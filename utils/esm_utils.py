@@ -18,6 +18,7 @@ class EsmEmbedding:
             "3b": (esm.pretrained.esm2_t36_3B_UR50D, [35]),
             "default": (esm.pretrained.esm2_t6_8M_UR50D, [5]),
         }
+        
         model_loader, self.layers = model_map.get(model, model_map["default"])
         self.model, self.alphabet = model_loader()
 
@@ -30,7 +31,7 @@ class EsmEmbedding:
             self.model = self.model.cuda()
             print("Transferred model to GPU")
 
-    def predict(self, data, mode="mean"):
+    def predict(self, data):
         """
         Generate embeddings for the provided data.
 
@@ -59,14 +60,14 @@ class EsmEmbedding:
         layer = self.layers[-1]  # Using only the last layer
         token_rep = results["representations"][layer]
 
-        # Process based on the selected mode
-        if mode == "mean":
-            # Use mean of the sequence embeddings (ignoring padding)
-            layer_embedding = token_rep[0, 1 : batch_lens[0] - 1].mean(axis=0)  # Mean on GPU
-        elif mode == "cls":
-            # Use the [CLS] token embedding (first token)
-            layer_embedding = token_rep[0, 0]  # Directly use the CLS token
-        else:
-            raise ValueError("Invalid mode. Use 'mean' or 'cls'.")
+        # # Process based on the selected mode
+        # if mode == "mean":
+        #     # Use mean of the sequence embeddings (ignoring padding)
+        #     layer_embedding = token_rep[0, 1 : batch_lens[0] - 1].mean(axis=0)  # Mean on GPU
+        # elif mode == "cls":
+        #     # Use the [CLS] token embedding (first token)
+        #     layer_embedding = token_rep[0, 0]  # Directly use the CLS token
+        # else:
+        #     raise ValueError("Invalid mode. Use 'mean' or 'cls'.")
 
-        return layer_embedding  # This will return a tensor if kept on GPU
+        return token_rep[0, 1 : batch_lens[0] - 1].mean(axis=0),token_rep[0, 0]  # This will return a tensor if kept on GPU
