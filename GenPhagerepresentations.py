@@ -34,7 +34,8 @@ def main(expt_name, output_folder, fasta_path, model_name, mode, chunk_size=16):
     v = esm_model.predict([('name','M')])
     ndim = v.to(device="cpu").numpy().shape[0]
 
-    processor = VectorProcessor(predict=esm_model.predict, ndim=ndim, zarr_path=zarr_store_path)
+    #processor = VectorProcessor(predict=esm_model.predict, ndim=ndim, zarr_path=zarr_store_path)
+    processor = VectorProcessor(predict=esm_model.predict, ndim=ndim,mode= mode, zarr_path=zarr_store_path)
 
     # Process data and store in Zarr
     zarr_path = processor.process_and_store(prefetcher)
