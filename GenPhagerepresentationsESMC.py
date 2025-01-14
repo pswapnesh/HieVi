@@ -30,7 +30,7 @@ class EsmCambrian:
         #     token_representations['mean'] = logits_output.embeddings[0,1:-1,:].mean(axis = 0)
         # if 'cls' in self.mode:
         #     token_representations['cls'] = logits_output.embeddings[0,0,:]
-        return logits_output.embeddings[0,1:-1,:].mean(axis = 0),logits_output.embeddings[0,0,:]
+        return logits_output.embeddings[-1,1:-1,:].mean(axis = 0),logits_output.embeddings[-1,0,:]
 
 
 def main(expt_name, output_folder, fasta_path, model_name, mode, chunk_size=16):
