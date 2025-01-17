@@ -92,7 +92,7 @@ class VectorProcessor:
         # Combine all vectors into a single array
         all_vectors_mean = torch.cat(all_vectors_mean, dim=0)  # Shape: (total_vectors, ndim)
         all_vectors_cls = torch.cat(all_vectors_cls, dim=0)  # Shape: (total_vectors, ndim)
-        print(all_vectors_mean.shape,all_vectors_cls.shape)
+        #print(all_vectors_mean.shape,all_vectors_cls.shape)
         
         norms = all_vectors_mean.norm(p=2, dim=1, keepdim=True)  # Compute L2 norm along axis 1 (for each vector)
         all_vectors_mean = all_vectors_mean / norms  # Normalize each vector
