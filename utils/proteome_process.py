@@ -5,6 +5,7 @@ from tqdm import tqdm
 import torch
 import logging
 
+
 class VectorProcessor:
     def __init__(self, predict, ndim, mode,zarr_path, chunk_size=16, log_path="failed_pnames.log"):
         """
@@ -94,11 +95,13 @@ class VectorProcessor:
         all_vectors_cls = torch.cat(all_vectors_cls, dim=0)  # Shape: (total_vectors, ndim)
         #print(all_vectors_mean.shape,all_vectors_cls.shape)
         
-        norms = all_vectors_mean.norm(p=2, dim=1, keepdim=True)  # Compute L2 norm along axis 1 (for each vector)
-        all_vectors_mean = all_vectors_mean / norms  # Normalize each vector
+        #norms = all_vectors_mean.norm(p=2, dim=1, keepdim=True)  # Compute L2 norm along axis 1 (for each vector)
+        #all_vectors_mean = all_vectors_mean / norms  # Normalize each vector
+        all_vectors_mean = torch.nn.functional.normalize(all_vectors_mean, p=2.0, dim=1, eps=1e-12)
 
-        norms = all_vectors_cls.norm(p=2, dim=1, keepdim=True)  # Compute L2 norm along axis 1 (for each vector)
-        all_vectors_cls = all_vectors_cls / norms  # Normalize each vector
+        #norms = all_vectors_cls.norm(p=2, dim=1, keepdim=True)  # Compute L2 norm along axis 1 (for each vector)
+        #all_vectors_cls = all_vectors_cls / norms  # Normalize each vector
+        all_vectors_cls = torch.nn.functional.normalize(all_vectors_cls, p=2.0, dim=1, eps=1e-12)
         
         # Compute mean and count
         all_vectors_mean = all_vectors_mean.mean(axis=0)  # Mean along axis 0
