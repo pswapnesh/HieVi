@@ -37,7 +37,6 @@ class EsmEmbedding:
 
         Parameters:
         - data: A batch of sequences to process.
-        - mode (str): Aggregation mode for embeddings. Options are 'mean' or 'cls' (default: 'mean').
 
         Returns:
         - np.ndarray: A numpy array containing the embedding vector.
@@ -59,15 +58,5 @@ class EsmEmbedding:
         # Extract embeddings for the last layer (no dictionary return, just the vector)
         layer = self.layers[-1]  # Using only the last layer
         token_rep = results["representations"][layer]
-
-        # # Process based on the selected mode
-        # if mode == "mean":
-        #     # Use mean of the sequence embeddings (ignoring padding)
-        #     layer_embedding = token_rep[0, 1 : batch_lens[0] - 1].mean(axis=0)  # Mean on GPU
-        # elif mode == "cls":
-        #     # Use the [CLS] token embedding (first token)
-        #     layer_embedding = token_rep[0, 0]  # Directly use the CLS token
-        # else:
-        #     raise ValueError("Invalid mode. Use 'mean' or 'cls'.")
 
         return token_rep[0, 1 : -1].mean(axis=0),token_rep[0, 0]  # This will return a tensor if kept on GPU

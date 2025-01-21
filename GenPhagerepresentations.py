@@ -31,7 +31,7 @@ def main(expt_name, output_folder, fasta_path, model_name, mode, chunk_size=16):
     # Wrap the accession generator with PrefetchCache to enable prefetching
     prefetcher = PrefetchCache(generator=accession_generator, prefetch_size=32)
 
-    v = esm_model.predict([('name','M')])
+    v,_ = esm_model.predict([('name','M')])
     ndim = v.to(device="cpu").numpy().shape[0]
 
     #processor = VectorProcessor(predict=esm_model.predict, ndim=ndim, zarr_path=zarr_store_path)
