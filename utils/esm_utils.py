@@ -70,4 +70,4 @@ class EsmEmbedding:
         # else:
         #     raise ValueError("Invalid mode. Use 'mean' or 'cls'.")
 
-        return token_rep[0, 1 : batch_lens[0] - 1].mean(axis=0),token_rep[0, 0]  # This will return a tensor if kept on GPU
+        return token_rep[0, 1 : -1].mean(axis=0),token_rep[0, 0]  # This will return a tensor if kept on GPU
