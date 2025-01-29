@@ -36,6 +36,7 @@ def main(args):
     # Load annotation data and HieVi tree
     annotation_df = pd.read_csv(args.annotation_path)
     hievi_tree = nx.read_gexf(args.hievi_tree_path)
+
     
     # Load query Zarr data
     query_zarr_store = zarr.open(args.query_zarr_path, mode="r")
@@ -48,21 +49,25 @@ def main(args):
     indices = np.unique(np.ravel(indices))
     print(f"Nearest neighbor search completed. Found {len(indices)} unique neighbors.")
     
-    # Get nearest accessions in tree
-    nearest_accessions = annotation_df.loc[indices]
-    nearest_accessions_in_tree = traverse_graph_and_get_accessions(hievi_tree, nearest_accessions["Accession"].values,args.n_levels)
-    indices = annotation_df.index[annotation_df["Accession"].isin(nearest_accessions_in_tree)].tolist()
     
-    # Load database Zarr data
+    
+    # Load database accessions
     db_zarr_store = zarr.open(args.db_zarr_path, mode="r")
     phage_ids = db_zarr_store["accessions"][indices]
     mprs = db_zarr_store["vectors_mean"][indices]
+    
+    # Get nearest accessions in tree    
+    nearest_accessions = annotation_df[annotation_df["Accession"].isin(phage_ids)]
+
+    #nearest_accessions_in_tree = traverse_graph_and_get_accessions(hievi_tree, nearest_accessions["Accession"].values,args.n_levels)
+    #indices = annotation_df.index[annotation_df["Accession"].isin(nearest_accessions_in_tree)].tolist()
+        
 
     print(f"Extracted {len(indices)} relevant phages. Re-clustering.")
     
     # Combine query and database data
     query_df = pd.DataFrame({"Accession": query_phage_ids})
-    annotation_df = pd.concat([annotation_df.loc[indices], query_df], axis=0)
+    annotation_df = pd.concat([nearest_accessions, query_df], axis=0)
     mprs = np.concatenate((mprs, query_mprs), axis=0)
     
     # Perform clustering
