@@ -2,3 +2,4 @@ test.ipynb
 *.pyc
 __pycache__
 job.slurm
+analysis

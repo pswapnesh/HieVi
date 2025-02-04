@@ -9,30 +9,78 @@ Viral taxonomy is a challenging task due to the propensity of viruses for recomb
 ### Interactive Phage Atlas
 https://pswapnesh.github.io/HieVi/HieVi_UMAP.html
 
+### Colab notebook
+[Colab notebook with esm2-650m model](https://colab.research.google.com/drive/1d9tzxLrnHo9eUAQoaGDQyisO4q02ZtFX?usp=sharing)
+
+### Download HieVi phage representations for INPHARED 1Sept2024 dataset
+[esm2-3b]()
+[esm2-650m]()
+Save it somewhere, say ```./hievi_inphared_1sept24/```.
+
 # Workflow
 ### Step 1: Generate a Multifasta Proteome File
-Create a multifasta file containing your proteome using your preferred method, or use the provided script:
-```python predict_proteome.py```
+Create a multifasta file containing your proteome using your preferred method. Make sure the unique names of phages donot contain underscore '_'. 
 
 ### Step 2: Format the Multifasta File
 Ensure your multifasta file (e.g., proteome.faa) is properly formatted:
 The accessions (or unique names of phages) must not contain underscores (_).
+Unique names and protein number should be separated by underscore, for example,
+
+```
+PHAGE-01_0001
+amino_acid_sequence
+>PHAGE-01_0002
+amino_acid_sequence
+>PHAGE-02_0001
+amino_acid_sequence
+```
 
 ### Step 3: Generate Phage Representations
 Use the following command to generate phage representations and output them to a specified directory. Ensure all paths are provided in full:
-```python GenPhageRepresentations.py "experiment_name" "/path/to/outputfolder/" "/path/to/proteome.faa" "650m" "mean"```
+```python GenPhageRepresentationsESM2.py "experiment_name" "/path/to/outputfolder/" "/path/to/proteome.faa" "650m" "mean"```
 
 **Notes:**
 - In this example, the model "650m" is used, which consumes less GPU memory.
 - If GPU memory is not a constraint, you can use the "3b" model instead.
-- The output will be saved as a Zarr file at: ```/path/to/outputfolder/{experiment_name}_{model}.zarr```
+- The output phage representations will be saved as a Zarr file at: ```/path/to/outputfolder/{experiment_name}_{model}.zarr```
 
-### Step 4: Generate a Hierarchical Tree
+### Step 4a: Generate hierarchical tree without reference dataset.
+To compare only the phages for which the phage representations were generated, you may use the following code.
+```
+import zarr 
+from utils.network_utils import *
+zarr_path = "/path/to/outputfolder/{experiment_name}_{model}.zarr"
+zarr_store = zarr.open(zarr_path,'r')
+vectors = zarr_store['vectors_mean'][:]*1.0
+accessions = zarr_store['accessions'][:]
+
+query_df = pd.DataFrame({"Accession": accessions})
+
+# Perform clustering
+dist_scaled = euclidean_distances(vectors).astype("double")
+clusterer = hdbscan.HDBSCAN(
+    min_cluster_size=2,
+    n_jobs=32,
+    min_samples=1,
+    allow_single_cluster=False,
+    cluster_selection_method="leaf",
+    metric="precomputed",
+    gen_min_span_tree=True
+)
+clusterer.fit(dist_scaled)
+query_df["HieVi_granular_cluster"] = clusterer.labels_
+
+# Create and save network
+G = make_network(clusterer, annotation_df)
+nx.write_gexf(G, zarr_path[:-5] + "_HieVi.gexf")
+```
+
+### Step 4b: Generate a hierarchical tree with reference dataset
+A download database vectors corresponding to the model (in this case 650m)
 To create an approximate hierarchical tree for the new proteomes, run the following command:
 ```python PlaceNewProteome.py "/path/to/HieVi_INPHARED_database_650m.zarr" "/path/to/outputfolder/{experiment_name}_{model}.zarr"```
 
 **Notes:**
-- Update the database path (HieVi_INPHARED_database_650m.zarr) as needed.
 - The output files and network will be generated in:
 ```/path/to/outputfolder/```
 

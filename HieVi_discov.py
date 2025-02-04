@@ -35,6 +35,7 @@ def main(args):
     
     # Load annotation data and HieVi tree
     annotation_df = pd.read_csv(args.annotation_path)
+    
     hievi_tree = nx.read_gexf(args.hievi_tree_path)
 
     
@@ -55,6 +56,9 @@ def main(args):
     db_zarr_store = zarr.open(args.db_zarr_path, mode="r")
     phage_ids = db_zarr_store["accessions"][indices]
     mprs = db_zarr_store["vectors_mean"][indices]
+    annotation_df= annotation_df[annotation_df["Accession"].isin(phage_ids)]
+    annotation_df = annotation_df.set_index("Accession").loc[phage_ids].reset_index()
+
     
     # Get nearest accessions in tree    
     nearest_accessions = annotation_df[annotation_df["Accession"].isin(phage_ids)]
