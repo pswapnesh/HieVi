@@ -18,7 +18,7 @@ class EsmEmbedding:
             "3b": (esm.pretrained.esm2_t36_3B_UR50D, [35]),
             "default": (esm.pretrained.esm2_t6_8M_UR50D, [5]),
         }
-        
+        self.device = "cuda"
         model_loader, self.layers = model_map.get(model, model_map["default"])
         self.model, self.alphabet = model_loader()
 
@@ -28,8 +28,12 @@ class EsmEmbedding:
         print("########## Model loaded.")
         torch.cuda.empty_cache()
         if torch.cuda.is_available():
+            self.device = "cuda"
             self.model = self.model.cuda()
             print("Transferred model to GPU")
+        else:
+            self.device = "cpu"
+            print("GPU not available. Running on CPU.")
 
     def predict(self, data):
         """
@@ -47,7 +51,7 @@ class EsmEmbedding:
         batch_labels, batch_strs, batch_tokens = self.batch_converter(data)
         batch_lens = (batch_tokens != self.alphabet.padding_idx).sum(1)
 
-        batch_tokens = batch_tokens.to(device="cuda", non_blocking=True)
+        batch_tokens = batch_tokens.to(device=self.device, non_blocking=True)
 
         # Run the model inference
         with torch.no_grad():
