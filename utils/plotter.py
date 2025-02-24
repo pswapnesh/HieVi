@@ -6,7 +6,7 @@ import random
 import plotly.colors as pc
 from networkx.drawing.nx_pydot import graphviz_layout
 
-def plot_hierarchical_graph(G):
+def plot_hierarchical_graph(G,layout = "radial"):
     if not isinstance(G, nx.DiGraph):
         raise ValueError("Graph must be a directed graph (nx.DiGraph)")
 
@@ -30,14 +30,17 @@ def plot_hierarchical_graph(G):
             G.nodes[node][key] = str(G.nodes[node][key])
 
     try:
-        pos = graphviz_layout(G, prog="dot")
+        if layout =="radial":
+            pos = graphviz_layout(G, prog="twopi")
+        else:
+            pos = graphviz_layout(G, prog="dot")
     except Exception as e:
         print("Error: Graphviz failed!", e)
         return
 
     # Get unique genera and assign random colors
     unique_genera = set(G.nodes[node].get("Genus", "Unclassified") for node in G.nodes())
-    color_map = {genus: random.choice(pc.DEFAULT_PLOTLY_COLORS) for genus in unique_genera}
+    color_map = {genus: random.choice(pc.sequential.Electric) for genus in unique_genera} #DEFAULT_PLOTLY_COLORS
 
     # Edge positions
     edge_x, edge_y = [], []
@@ -69,7 +72,7 @@ def plot_hierarchical_graph(G):
             node_colors.append("red")  # Node fill color
             node_borders.append("red")  # Node border color
         elif genus == "Unclassified":
-            node_colors.append("orange")  # Unclassified nodes
+            node_colors.append("gray")  # Unclassified nodes
             node_borders.append("black")
         else:
             node_colors.append(color_map.get(genus, "gray"))  # Assign random colormap
