@@ -2,5 +2,8 @@ test.ipynb
 *.pyc
 __pycache__
 job.slurm
-analysis/
-analysis/*.ipynb
+analysis/*
+analysis/eps.ipynb
+analysis/*.py
+analysis/*.npy
+test_prediction.ipynb
