@@ -17,6 +17,28 @@ https://pswapnesh.github.io/HieVi/HieVi_UMAP.html
 [esm2-650m]()
 Save it somewhere, say ```./hievi_inphared_1sept24/```.
 
+## Install Required Packages and Data
+
+### Package Installation
+```bash
+# Install ESM (Evolutionary Scale Modeling) from Facebook Research's GitHub (main branch)
+pip install git+https://github.com/facebookresearch/esm.git
+
+# Install HDBSCAN clustering, pandas, and Biopython
+pip install hdbscan pandas biopython
+
+# Install FAISS for similarity search (CPU version)
+pip install faiss-cpu
+
+# Install specific version of Zarr for array storage
+pip install zarr==2.18.4
+
+# Clone HieVi repository (hievi branch)
+git clone --branch hievi https://github.com/pswapnesh/HieVi.git
+
+conda install anaconda::pydot
+conda install -c conda-forge plotly
+
 # Workflow
 ### Step 1: Generate a Multifasta Proteome File
 Create a multifasta file containing your proteome using your preferred method. Make sure the unique names of phages donot contain underscore '_'. 
