@@ -7,3 +7,4 @@ analysis/eps.ipynb
 analysis/*.py
 analysis/*.npy
 test_prediction.ipynb
+umap_timeline.ipynb
