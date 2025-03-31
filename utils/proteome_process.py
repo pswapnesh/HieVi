@@ -97,11 +97,11 @@ class VectorProcessor:
         
         #norms = all_vectors_mean.norm(p=2, dim=1, keepdim=True)  # Compute L2 norm along axis 1 (for each vector)
         #all_vectors_mean = all_vectors_mean / norms  # Normalize each vector
-        all_vectors_mean = torch.nn.functional.normalize(all_vectors_mean, p=2.0, dim=1, eps=1e-12)
+        all_vectors_mean = torch.nn.functional.normalize(all_vectors_mean, p=2.0, dim=1, eps=1e-14)
 
         #norms = all_vectors_cls.norm(p=2, dim=1, keepdim=True)  # Compute L2 norm along axis 1 (for each vector)
         #all_vectors_cls = all_vectors_cls / norms  # Normalize each vector
-        all_vectors_cls = torch.nn.functional.normalize(all_vectors_cls, p=2.0, dim=1, eps=1e-12)
+        all_vectors_cls = torch.nn.functional.normalize(all_vectors_cls, p=2.0, dim=1, eps=1e-14)
         
         # Compute mean and count
         all_vectors_mean = all_vectors_mean.mean(axis=0)  # Mean along axis 0
@@ -140,8 +140,9 @@ class VectorProcessor:
             store.create_dataset('vectors_cls', shape=(n_accessions, self.ndim), dtype=np.float32, chunks=(self.chunk_size, self.ndim), compressor=None)
 
         # Process each accession and store results in Zarr
-        for i, accession in tqdm(enumerate(accessions)):
-            data = accession_data[accession]
+        #for i, accession in tqdm(enumerate(accessions)):
+        for i,(accession, pname, seq) in tqdm(enumerate(generator)):
+            data = (pname,seq)
             mean_vector_mean,mean_vector_cls, count = self.compute_mean_vector(data, accession)
             store['vectors_mean'][i] = mean_vector_mean  # Append mean_vector to 'vectors' dataset
             if 'cls' in self.mode:
