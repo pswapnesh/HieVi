@@ -44,20 +44,22 @@ class FastaReader:
         """
         current_accession = None
         current_sequences = []
-
+        current_recrod_ids = []
         with open(self.fasta_path, 'r') as fasta_file:
             for record in SeqIO.parse(fasta_file, 'fasta'):
-                accession = record.id.split('_')[0]  # Extract accession
+                accession = record.id.split('_')[0]  # Extract accession                
                 
                 # If a new accession is encountered, yield the previous one
                 if current_accession and accession != current_accession:
-                    yield current_accession, current_sequences
+                    yield current_accession, current_recrod_ids,current_sequences
                     current_sequences = []  # Reset for the next accession
+                    current_recrod_ids = []
                 
                 current_accession = accession
                 # Replace `*` with the unknown token
                 current_sequences.append(str(record.seq).replace('*', self.unknown_token))
+                current_recrod_ids.append(str(record.id))
 
             # Yield the last accession group
             if current_accession:
-                yield current_accession, current_sequences
+                yield current_accession, current_recrod_ids,current_sequences

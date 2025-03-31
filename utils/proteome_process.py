@@ -97,11 +97,11 @@ class VectorProcessor:
         
         #norms = all_vectors_mean.norm(p=2, dim=1, keepdim=True)  # Compute L2 norm along axis 1 (for each vector)
         #all_vectors_mean = all_vectors_mean / norms  # Normalize each vector
-        all_vectors_mean = torch.nn.functional.normalize(all_vectors_mean, p=2.0, dim=1, eps=1e-14)
+        all_vectors_mean = torch.nn.functional.normalize(all_vectors_mean, p=2.0, dim=1)
 
         #norms = all_vectors_cls.norm(p=2, dim=1, keepdim=True)  # Compute L2 norm along axis 1 (for each vector)
         #all_vectors_cls = all_vectors_cls / norms  # Normalize each vector
-        all_vectors_cls = torch.nn.functional.normalize(all_vectors_cls, p=2.0, dim=1, eps=1e-14)
+        all_vectors_cls = torch.nn.functional.normalize(all_vectors_cls, p=2.0, dim=1)
         
         # Compute mean and count
         all_vectors_mean = all_vectors_mean.mean(axis=0)  # Mean along axis 0
@@ -110,7 +110,7 @@ class VectorProcessor:
         
         return all_vectors_mean.to('cpu').numpy(),all_vectors_cls.to('cpu').numpy(), count
 
-    def process_and_store(self, generator):
+    def process_and_store(self, generator,n_accessions):
         """
         Processes data from a generator and stores results in a Zarr file.
         
@@ -120,16 +120,6 @@ class VectorProcessor:
         Returns:
             str: Path to the Zarr file containing processed data.
         """
-        accession_data = defaultdict(list)
-
-        # Group by accession
-        for accession, pname, seq in generator:
-            accession_data[accession].append((pname, seq))
-
-        
-
-        accessions = list(accession_data.keys())
-        n_accessions = len(accessions)
 
         # Initialize Zarr store with chunk_size
         store = zarr.open(self.zarr_path, mode='w')
@@ -141,8 +131,8 @@ class VectorProcessor:
 
         # Process each accession and store results in Zarr
         #for i, accession in tqdm(enumerate(accessions)):
-        for i,(accession, pname, seq) in tqdm(enumerate(generator)):
-            data = (pname,seq)
+        for i,(accession, pnames, seqs) in tqdm(enumerate(generator)):
+            data = [(pname,seq) for pname,seq in zip(pnames, seqs)]
             mean_vector_mean,mean_vector_cls, count = self.compute_mean_vector(data, accession)
             store['vectors_mean'][i] = mean_vector_mean  # Append mean_vector to 'vectors' dataset
             if 'cls' in self.mode:
