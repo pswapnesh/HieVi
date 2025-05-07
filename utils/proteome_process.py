@@ -125,9 +125,9 @@ class VectorProcessor:
         store = zarr.open(self.zarr_path, mode='w')
         store.create_dataset('accessions', shape=(n_accessions,), dtype='<U50', chunks=(self.chunk_size,), compressor=None)
         store.create_dataset('counts', shape=(n_accessions,), dtype=np.int32, chunks=(self.chunk_size,), compressor=None)
-        store.create_dataset('vectors_mean', shape=(n_accessions, self.ndim), dtype=np.float32, chunks=(self.chunk_size, self.ndim), compressor=None)
+        store.create_dataset('vectors_mean', shape=(n_accessions, self.ndim), dtype=np.float64, chunks=(self.chunk_size, self.ndim), compressor=None)
         if 'cls' in self.mode:
-            store.create_dataset('vectors_cls', shape=(n_accessions, self.ndim), dtype=np.float32, chunks=(self.chunk_size, self.ndim), compressor=None)
+            store.create_dataset('vectors_cls', shape=(n_accessions, self.ndim), dtype=np.float64, chunks=(self.chunk_size, self.ndim), compressor=None)
 
         # Process each accession and store results in Zarr
         #for i, accession in tqdm(enumerate(accessions)):
