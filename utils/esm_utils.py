@@ -13,10 +13,10 @@ class EsmEmbedding:
         """
         # Load model and define layers based on the version
         model_map = {
-            "650m": (esm.pretrained.esm2_t33_650M_UR50D, [33]),
-            "15b": (esm.pretrained.esm2_t48_15B_UR50D, [47]),
-            "3b": (esm.pretrained.esm2_t36_3B_UR50D, [35]),
-            "default": (esm.pretrained.esm2_t6_8M_UR50D, [5]),
+            "650m": (esm.pretrained.esm2_t33_650M_UR50D, [34]),
+            "15b": (esm.pretrained.esm2_t48_15B_UR50D, [48]),
+            "3b": (esm.pretrained.esm2_t36_3B_UR50D, [36]),
+            "default": (esm.pretrained.esm2_t6_8M_UR50D, [6]),
         }
         self.device = "cuda"
         model_loader, self.layers = model_map.get(model, model_map["default"])
@@ -61,6 +61,6 @@ class EsmEmbedding:
 
         # Extract embeddings for the last layer (no dictionary return, just the vector)
         layer = self.layers[-1]  # Using only the last layer
-        token_rep = results["representations"][layer]
+        token_rep = results["representations"][layer].to(torch.float64)
 
         return token_rep[0, 1 : -1].mean(axis=0),token_rep[0, 0]  # This will return a tensor if kept on GPU
