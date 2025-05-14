@@ -51,7 +51,7 @@ if __name__ == "__main__":
     parser.add_argument('output_folder', type=str, help="Output folder path")
     parser.add_argument('fasta_path', type=str, help="Path to the FASTA file")
     parser.add_argument('model_name', type=str, choices=["650m", "3b", "15b"], help="Model name")
-    parser.add_argument('mode', type=str, choices=["mean", "cls"], help="Mode for processing embeddings (mean/cls)")
+    parser.add_argument('mode', type=str, choices=["mean", "cls", "mean+cls"], help="Mode for processing embeddings (mean/cls)")
 
     # Parse command line arguments
     args = parser.parse_args()

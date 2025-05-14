@@ -1,7 +1,7 @@
 from Bio import SeqIO
 
 class FastaReader:
-    def __init__(self, fasta_path, unknown_token='<unk>'):
+    def __init__(self, fasta_path, unknown_token=''):
         """
         Initialize the FastaReader with the given parameters.
         
