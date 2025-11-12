@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Optimized 3D Galaxy Points with All Features</title>
+  <style>
+    body { margin: 0; padding: 0; overflow: hidden; background: #1a1a1a; }
+    #info { position: absolute; top: 10px; left: 10px; color: #888; font-family: Arial; font-size: 11px; z-index: 10; }
+    
+    /* CSS for Tooltip */
+    #point-tooltip {
+      position: absolute;
+      background: rgba(40, 40, 40, 0.9);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 3px;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      pointer-events: none; /* Crucial: Do not block mouse events */
+      display: none;
+      z-index: 100;
+      max-width: 250px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    /* Dark input and button styling */
+    input[type="text"] {
+      background: #333;
+      color: white;
+      border: 1px solid #555;
+      border-radius: 3px;
+      padding: 8px;
+    }
+    
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #777;
+    }
+    
+    button {
+      background: #444;
+      color: white;
+      border: 1px solid #666;
+      border-radius: 3px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background: #555;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+</head>
+<body>
+  <div id="info">Mouse: rotate (inertia) | Wheel: zoom | Hover: tooltip | Click: select | Double-Click: reset | ESC: deselect</div>
+  
+  <div style="position: absolute; top: 50px; left: 10px; color: #888; font-family: Arial; font-size: 12px; z-index: 10;">
+    <label><input type="checkbox" id="toggle3d" checked> 3D Mode</label><br>
+    <input type="text" id="accessionSearch" placeholder="Enter Accession ID" style="margin-top: 10px;">
+    <button onclick="searchAccession()" style="margin-left: 5px;">🔍</button><br>
+    
+
+  </div>
+  
+  <div id="point-tooltip"></div>
+  
+  <div id="metadata" style="position: absolute; top: 10px; right: 10px; width: 200px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-family: Arial; display: none; z-index: 10;">
+    <h3>Selected Point Metadata</h3>
+    <div id="metadata-content"></div>
+  </div>
+  <script>
+    let scene, camera, renderer, points, raycaster, mouse, pointsData, is3D = true, selectedIndex = -1;
+    let pointColorsArray, pointSizesArray;
+    let genusColorMap = {}; 
+    
+    // --- Interaction and Inertia Constants ---
+    let isMoving = false; 
+    let isMouseDown = false;
+    const DRAG_THRESHOLD = 5; 
+    const DAMPING_FACTOR = 0.95; 
+    let rotationSpeedX = 0;
+    let rotationSpeedY = 0;
+
+    
+    // Visual and Selection Constants
+    const defaultPointSize = 1.1; 
+    const selectedPointSize = 8.0; 
+    const highlightColor = new THREE.Color(0, 1, 0);
+    const RAYCASTER_THRESHOLD = 1.1;
+
+    // Reset View Constants
+    const INITIAL_CAMERA_Z = 200; // Adjusted for initial spread
+    const INITIAL_SCENE_ROTATION = { x: 0, y: 0, z: 0 };
+
+    const baseColorPalette = [
+      [0.0, 0.8, 1.0],    // Cyan glow
+      [1.0, 0.3, 0.5],    // Hot magenta
+      [0.5, 1.0, 0.3],    // Acid green
+      [1.0, 0.6, 0.0],    // Amber
+      [0.7, 0.4, 1.0],    // Electric purple
+      [0.0, 1.0, 0.7],    // Teal neon
+      [1.0, 0.9, 0.2],    // Laser yellow
+      [1.0, 0.2, 0.8],    // Plasma pink
+      [0.3, 0.9, 1.0],    // Ice blue
+      [0.9, 0.5, 0.0],    // Radioactive orange
+      [0.5, 0.3, 1.0],    // Deep violet
+      [0.0, 1.0, 0.4],    // Matrix green
+      [1.0, 0.4, 0.3],    // Fusion red
+      [0.4, 0.7, 1.0],    // Hologram blue
+      [1.0, 0.7, 0.9],    // Soft neon pink
+      [0.2, 1.0, 0.9],    // Aqua glow
+      [0.9, 0.9, 0.4],    // Neon lime
+      [0.8, 0.3, 1.0],    // Royal purple
+      [0.3, 1.0, 0.6],    // Emerald glow
+      [1.0, 0.5, 0.6]     // Coral beam
+    ];
+
+    fetch('output_results.json')
+      .then(response => response.json())
+      .then(data => {
+        pointsData = data;
+        
+        // Genus Coloring Logic
+        const uniqueGenera = [...new Set(data.map(p => p.Genus))].sort();
+        uniqueGenera.forEach((genus, index) => {
+            const colorIndex = index % baseColorPalette.length;
+            genusColorMap[genus] = baseColorPalette[colorIndex];
+        });
+
+        pointColorsArray = new Float32Array(data.length * 3);
+        pointSizesArray = new Float32Array(data.length);
+        
+        // Initialize point colors and sizes
+        pointsData.forEach((point, i) => {
+            const color = genusColorMap[point.Genus] || [1, 1, 1];
+            pointColorsArray[i * 3 + 0] = color[0];
+            pointColorsArray[i * 3 + 1] = color[1];
+            pointColorsArray[i * 3 + 2] = color[2];
+            pointSizesArray[i] = defaultPointSize;
+        });
+
+        init();
+        animate();
+      })
+      .catch(error => console.error('Error loading points:', error));
+
+    function createPointTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gradient.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)'); 
+      gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.5)'); 
+      gradient.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)'); 
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 64, 64);
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x1a1a1a);
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const geometry = new THREE.BufferGeometry();
+      
+      const initialPositions = new Float32Array(pointsData.length * 3);
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(initialPositions, 3));
+      geometry.setAttribute('color', new THREE.Float32BufferAttribute(pointColorsArray, 3));
+      geometry.setAttribute('size', new THREE.Float32BufferAttribute(pointSizesArray, 1));
+      
+      const material = new THREE.PointsMaterial({ 
+        vertexColors: true,
+        size: defaultPointSize, 
+        sizeAttenuation: true,
+        map: createPointTexture(),
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+
+      points = new THREE.Points(geometry, material);
+      scene.add(points);
+
+      camera.position.z = INITIAL_CAMERA_Z; 
+      camera.lookAt(0, 0, 0);
+
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
+      raycaster.params.Points.threshold = RAYCASTER_THRESHOLD;
+
+      setupEventListeners();
+      
+      // Apply initial spread after event listeners are set up
+      updatePointPositions();
+    }
+
+    function setupEventListeners() {
+      let previousMouseX = 0, previousMouseY = 0;
+      let clickStartX = 0, clickStartY = 0;
+
+      document.addEventListener('mousedown', (e) => {
+        // Prevent camera interaction if clicking on UI elements
+        if (e.target.closest('#metadata') || e.target.closest('input') || e.target.closest('button') || e.target.closest('#toggle3d') || e.target.closest('#spreadSlider')) return;
+        
+        isMouseDown = true;
+        isMoving = false; 
+        
+        previousMouseX = e.clientX;
+        previousMouseY = e.clientY;
+        clickStartX = e.clientX;
+        clickStartY = e.clientY;
+
+        e.preventDefault();
+      });
+
+      document.addEventListener('mouseup', () => { 
+        isMouseDown = false; 
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        
+        // Handle Hover Logic (Tooltip)
+        // Check if mouse is over the canvas, not UI elements
+        if (!e.target.closest('#metadata') && !e.target.closest('input') && !e.target.closest('button') && !e.target.closest('#toggle3d') && !e.target.closest('#spreadSlider')) {
+            handlePointHover(e.clientX, e.clientY);
+        } else {
+            hideTooltip();
+        }
+
+        if (!isMouseDown) return;
+
+        const deltaX = e.clientX - previousMouseX;
+        const deltaY = e.clientY - previousMouseY;
+
+        if (Math.abs(e.clientX - clickStartX) > DRAG_THRESHOLD || Math.abs(e.clientY - clickStartY) > DRAG_THRESHOLD) {
+            isMoving = true;
+        }
+
+        if (deltaX !== 0 || deltaY !== 0) {
+            scene.rotation.y += deltaX * 0.005;
+            scene.rotation.x += deltaY * 0.005;
+            
+            rotationSpeedY = deltaX * 0.005; 
+            rotationSpeedX = deltaY * 0.005; 
+            
+            previousMouseX = e.clientX;
+            previousMouseY = e.clientY;
+        }
+      });
+
+      document.addEventListener('wheel', (e) => {
+        camera.position.z += e.deltaY * 0.1;
+        camera.position.z = Math.max(5, Math.min(camera.far * 0.8, camera.position.z));
+      });
+
+      document.addEventListener('click', handlePointClick);
+      document.addEventListener('dblclick', resetView);
+
+      // --- ESCAPE KEY DESELECT ---
+      document.addEventListener('keyup', (e) => {
+        if (e.key === 'Escape') {
+            deselectAll();
+        }
+      });
+
+      document.getElementById('toggle3d').addEventListener('change', (e) => {
+        is3D = e.target.checked;
+        updatePointPositions();
+        updatePointVisuals();
+      });
+      
+      document.getElementById('accessionSearch').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') searchAccession();
+      });
+
+
+    }
+
+    // --- Hover Functions ---
+    function handlePointHover(clientX, clientY) {
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(points);
+
+      if (intersects.length > 0) {
+        const index = intersects[0].index;
+        const pointData = pointsData[index];
+        showTooltip(pointData, clientX, clientY);
+      } else {
+        hideTooltip();
+      }
+    }
+    
+    function showTooltip(point, x, y) {
+      const tooltip = document.getElementById('point-tooltip');
+      
+      let html = `<strong>Accession:</strong> ${point.Accession}<br>`;
+      html += `<strong>Genus:</strong> ${point.Genus}<br>`;
+      html += `<strong>Label:</strong> ${point.Label}`;
+
+      tooltip.innerHTML = html;
+      tooltip.style.left = (x + 10) + 'px'; 
+      tooltip.style.top = (y + 10) + 'px';
+      tooltip.style.display = 'block';
+    }
+    
+    function hideTooltip() {
+      document.getElementById('point-tooltip').style.display = 'none';
+    }
+
+    function updateRaycasterThreshold() {
+      // Scale threshold with spread multiplier for proper hit detection
+    raycaster.params.Points.threshold = RAYCASTER_THRESHOLD * currentSpreadMultiplier;
+
+    }
+    // -----------------------
+
+    function resetView() {
+        camera.position.set(0, 0, INITIAL_CAMERA_Z);
+        camera.lookAt(0, 0, 0);
+        
+        scene.rotation.set(
+            INITIAL_SCENE_ROTATION.x, 
+            INITIAL_SCENE_ROTATION.y, 
+            INITIAL_SCENE_ROTATION.z
+        );
+        
+        rotationSpeedX = 0;
+        rotationSpeedY = 0;
+
+        deselectAll(); 
+    }
+
+    function handlePointClick(e) {
+      if (isMoving) return; 
+      
+      // Prevent click interaction if it originated on a UI element
+      if (e.target.closest('#metadata') || e.target.closest('input') || e.target.closest('button') || e.target.closest('#toggle3d') || e.target.closest('#spreadSlider')) return;
+      
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObject(points);
+      
+      if (intersects.length > 0) {
+        const index = intersects[0].index; 
+        if (index === selectedIndex) {
+          deselectAll();
+        } else {
+          selectedIndex = index;
+          updatePointVisuals();
+          showMetadata(pointsData[index], index);
+        }
+      } else {
+        deselectAll();
+      }
+    }
+    
+    function updatePointPositions() {
+      var globalPointScale = 5
+      if (!pointsData || !points || !points.geometry.attributes.position) return; 
+      
+      const positions = points.geometry.attributes.position.array;
+      
+      pointsData.forEach((point, i) => {
+        const pos = is3D ? point.position_3d : point.position_2d;
+        
+        positions[i * 3 + 0] = pos[0]*globalPointScale;
+        positions[i * 3 + 1] = pos[1]*globalPointScale;
+        positions[i * 3 + 2] = is3D ? pos[2]*globalPointScale : 0;
+      });
+      
+      points.geometry.attributes.position.needsUpdate = true;
+    }
+
+    function updatePointVisuals() {
+      if (!pointsData || !points || !points.geometry.attributes.color) return;
+
+      const colorsAttribute = points.geometry.attributes.color;
+      const sizesAttribute = points.geometry.attributes.size; 
+      
+      pointsData.forEach((point, index) => {
+        const baseColor = genusColorMap[point.Genus] || [1, 1, 1];
+        
+        if (selectedIndex === -1) {
+          colorsAttribute.setXYZ(index, baseColor[0], baseColor[1], baseColor[2]);
+          sizesAttribute.setX(index, defaultPointSize);
+        } else if (index === selectedIndex) {
+          // Make selected point glow with bright green and larger size
+          colorsAttribute.setXYZ(index, 0, 2.0, 0); // Bright glowing green
+          sizesAttribute.setX(index, selectedPointSize * 2);
+        } else {
+          const dimFactor = 0.15;
+          colorsAttribute.setXYZ(index, baseColor[0] * dimFactor, baseColor[1] * dimFactor, baseColor[2] * dimFactor);
+          sizesAttribute.setX(index, defaultPointSize);
+        }
+      });
+      
+      colorsAttribute.needsUpdate = true;
+      sizesAttribute.needsUpdate = true;
+    }
+
+    function searchAccession() {
+      const searchValue = document.getElementById('accessionSearch').value.trim();
+      if (!searchValue) {
+        alert('Please enter an Accession ID.');
+        return;
+      }
+      
+      const foundIndex = pointsData.findIndex(point => point.Accession === searchValue);
+      if (foundIndex === -1) {
+        return;
+      }
+      
+      selectedIndex = foundIndex;
+      updatePointVisuals();
+      
+      const point = pointsData[foundIndex];
+      showMetadata(point, foundIndex);
+      
+      const targetPos = new THREE.Vector3();
+      const positionArray = points.geometry.attributes.position.array;
+      targetPos.set(positionArray[foundIndex * 3], positionArray[foundIndex * 3 + 1], positionArray[foundIndex * 3 + 2]);
+      
+      const zoomOffset = is3D ? 50 : 20;
+      camera.position.set(targetPos.x + zoomOffset, targetPos.y + zoomOffset, targetPos.z + zoomOffset);
+      camera.lookAt(targetPos);
+    }
+
+    function deselectAll() {
+      selectedIndex = -1;
+      updatePointVisuals();
+      hideMetadata();
+    }
+    
+    function showMetadata(point, index) {
+      const metadata = document.getElementById('metadata');
+      const content = document.getElementById('metadata-content');
+      
+      let html = `<strong>Point #${index + 1}</strong><br><br>`;
+      
+      Object.keys(point).forEach(key => {
+        if (key.startsWith('position_')) {
+          if ((key === 'position_3d' && is3D) || (key === 'position_2d' && !is3D)) {
+            html += `<strong>${key.replace('_', ' ')}:</strong><br>`;
+            html += `X: ${point[key][0].toFixed(2)}<br>`;
+            html += `Y: ${point[key][1].toFixed(2)}<br>`;
+            if (is3D) html += `Z: ${point[key][2].toFixed(2)}<br><br>`;
+            else html += `<br>`;
+          }
+        } else {
+          html += `<strong>${key}:</strong> ${point[key]}<br>`;
+        }
+      });
+      
+      content.innerHTML = html;
+      metadata.style.display = 'block';
+    }
+
+    function hideMetadata() {
+      document.getElementById('metadata').style.display = 'none';
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Inertia Logic
+      if (!isMouseDown) {
+        scene.rotation.y += rotationSpeedY;
+        scene.rotation.x += rotationSpeedX;
+
+        rotationSpeedY *= DAMPING_FACTOR;
+        rotationSpeedX *= DAMPING_FACTOR;
+        
+        if (Math.abs(rotationSpeedY) < 0.0001) rotationSpeedY = 0;
+        if (Math.abs(rotationSpeedX) < 0.0001) rotationSpeedX = 0;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
