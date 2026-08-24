@@ -8,3 +8,5 @@ analysis/*.py
 analysis/*.npy
 test_prediction.ipynb
 umap_timeline.ipynb
+Annotation_files/*
+.DS_Store
