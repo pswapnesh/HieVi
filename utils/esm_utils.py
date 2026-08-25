@@ -15,7 +15,7 @@ class EsmEmbedding:
         model_map = {
             "650m": (esm.pretrained.esm2_t33_650M_UR50D, [34]),
             "15b": (esm.pretrained.esm2_t48_15B_UR50D, [48]),
-            "3b": (esm.pretrained.esm2_t36_3B_UR50D, [36]),
+            "3b": (esm.pretrained.esm2_t36_3B_UR50D, [35]),
             "default": (esm.pretrained.esm2_t6_8M_UR50D, [6]),
         }
         self.device = "cuda"
